@@ -1,0 +1,73 @@
+/* CSS Variables & Reset */
+:root {
+    --primary: #4f46e5;
+    --primary-hover: #4338ca;
+    --bg-dark: #0f172a;
+    --text-light: #f8fafc;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f5f9; 
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1; 
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8; 
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.view-section {
+  animation: fadeIn 0.3s ease-out forwards;
+}
+
+/* Active Nav Link */
+.nav-link.active-nav {
+  background-color: #1e293b; /* slate-800 */
+  color: white;
+}
+.nav-link.active-nav .material-icons-outlined {
+  color: #818cf8; /* indigo-400 */
+}
+
+/* Loader */
+.loader-bar {
+  height: 3px;
+  width: 100%;
+  background: #e2e8f0;
+  overflow: hidden;
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 50;
+}
+.loader-bar::after {
+  content: '';
+  display: block;
+  height: 100%;
+  width: 50%;
+  background: #4f46e5;
+  animation: progress 1.5s infinite ease-in-out;
+}
+
+@keyframes progress {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(200%); }
+}
+
+/* Modal Backdrop */
+.modal-backdrop {
+    background-color: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(4px);
+}
