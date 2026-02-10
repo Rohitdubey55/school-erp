@@ -58,9 +58,48 @@ function getData(sheetName) {
   const sheet = getSheetByName(sheetName);
   const data = sheet.getDataRange().getValues();
   const headers = data.shift();
+  
+  // Create a mapping of original headers to normalized keys
+  const keyMap = headers.map(h => {
+    return h.toString().toLowerCase()
+      .replace(/\s+/g, '') // remove spaces
+      .replace(/[^a-z0-9]/g, ''); // remove non-alphanumeric
+  });
+
+  // Manual overrides for specific columns to ensure consistency
+  // This maps the "clean" header to our desired internal key
+  const fieldMapping = {
+    'rollno': 'roll',
+    'roll': 'roll',
+    'studentname': 'name',
+    'name': 'name',
+    'fathername': 'fatherName',
+    'phonenumber': 'phone',
+    'phone': 'phone',
+    'class': 'class',
+    'tuitionfee': 'tuitionFee',
+    'vanfee': 'vanFee',
+    'otherfee': 'otherFee',
+    'prevbalance': 'prevBalance',
+    'balance': 'balance',
+    'totalreceived': 'totalReceived',
+    'amountpaid': 'amountPaid',
+    'paymentmode': 'mode',
+    'date': 'date',
+    'amount': 'amount',
+    'category': 'category',
+    'description': 'description',
+    'remarks': 'remarks'
+  };
+
   return data.map(row => {
     let obj = {};
-    headers.forEach((h, i) => obj[h] = row[i]);
+    headers.forEach((h, i) => {
+        const cleanHeader = keyMap[i];
+        // Use mapped key if exists, else default to clean header
+        const key = fieldMapping[cleanHeader] || cleanHeader;
+        obj[key] = row[i];
+    });
     return obj;
   });
 }
@@ -78,17 +117,17 @@ function saveStudent(student) {
   const rollColIndex = 0; 
   
   for (let i = 1; i < data.length; i++) {
-    if (data[i][rollColIndex] == student.Roll) {
+    if (data[i][rollColIndex] == student.roll) {
       rowIndex = i + 1;
       break;
     }
   }
 
   // Calculate Totals
-  const prevBal = Number(student.PrevBalance) || 0;
-  const tuition = Number(student.TuitionFee) || 0;
-  const van = Number(student.VanFee) || 0;
-  const other = Number(student.OtherFee) || 0;
+  const prevBal = Number(student.prevBalance) || 0;
+  const tuition = Number(student.tuitionFee) || 0;
+  const van = Number(student.vanFee) || 0;
+  const other = Number(student.otherFee) || 0;
   
   const totalDue = prevBal + tuition + van + other;
   
@@ -102,10 +141,10 @@ function saveStudent(student) {
   const balance = totalDue - totalReceived;
 
   const rowData = [
-    student.Roll,
-    student.Class,
-    student.Name,
-    student.FatherName,
+    student.roll,
+    student.class,
+    student.name,
+    student.fatherName,
     prevBal,
     tuition,
     van,
@@ -113,8 +152,8 @@ function saveStudent(student) {
     totalDue, 
     totalReceived,
     balance,
-    student.Phone,
-    student.LastReminder || ''
+    student.phone,
+    student.lastReminder || ''
   ];
 
   if (rowIndex > 0) {
@@ -135,29 +174,30 @@ function collectFee(transaction) {
   // 1. Log Transaction
   tSheet.appendRow([
     new Date(),
-    transaction.Roll,
-    transaction.Name,
-    transaction.Class,
-    transaction.Amount,
-    transaction.Mode,
-    transaction.Remarks
+    transaction.roll,
+    transaction.name,
+    transaction.class,
+    transaction.amount,
+    transaction.mode,
+    transaction.remarks
   ]);
   
   // 2. Update Student Balance
   const data = sSheet.getDataRange().getValues();
   for (let i = 1; i < data.length; i++) {
-    if (data[i][0] == transaction.Roll) { // Match Roll
+    if (data[i][0] == transaction.roll) { // Match Roll
       const receivedCol = 10; // Column J (1-based index)
       const balanceCol = 11; // Column K
       
       const currentReceived = Number(data[i][9]) || 0;
       const totalDue = Number(data[i][8]) || 0;
       
-      const newReceived = currentReceived + Number(transaction.Amount);
+      const newReceived = currentReceived + Number(transaction.amount);
       const newBalance = totalDue - newReceived;
       
-      sSheet.getRange(i + 1, receivedCol).setValue(newReceived);
-      sSheet.getRange(i + 1, balanceCol).setValue(newBalance);
+      const rowNum = i + 1; // 1-based index
+      sSheet.getRange(rowNum, receivedCol).setValue(newReceived);
+      sSheet.getRange(rowNum, balanceCol).setValue(newBalance);
       break;
     }
   }
@@ -173,9 +213,9 @@ function saveExpense(expense) {
   const sheet = getSheetByName('Expenses');
   sheet.appendRow([
     new Date(),
-    expense.Category,
-    expense.Amount,
-    expense.Description
+    expense.category,
+    expense.amount,
+    expense.description
   ]);
   return { success: true };
 }
@@ -188,18 +228,18 @@ function getDashboardStats() {
     const expenses = getData('Expenses');
 
     let totalStudents = students.length;
-    let totalCollected = transactions.reduce((sum, t) => sum + (Number(t['Amount Paid']) || 0), 0);
-    let totalPending = students.reduce((sum, s) => sum + (Number(s['Balance']) || 0), 0);
+    let totalCollected = transactions.reduce((sum, t) => sum + (Number(t.amountPaid) || 0), 0);
+    let totalPending = students.reduce((sum, s) => sum + (Number(s.balance) || 0), 0);
     
     // Today's Collection
     const today = new Date().toDateString();
     let todayCollected = transactions
-        .filter(t => new Date(t['Date']).toDateString() === today)
-        .reduce((sum, t) => sum + (Number(t['Amount Paid']) || 0), 0);
+        .filter(t => new Date(t.date).toDateString() === today)
+        .reduce((sum, t) => sum + (Number(t.amountPaid) || 0), 0);
 
     let todayExpense = expenses
-        .filter(e => new Date(e['Date']).toDateString() === today)
-        .reduce((sum, e) => sum + (Number(e['Amount']) || 0), 0);
+        .filter(e => new Date(e.date).toDateString() === today)
+        .reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
     
     return {
         totalStudents,
@@ -207,6 +247,6 @@ function getDashboardStats() {
         totalPending,
         todayCollected,
         todayExpense,
-        netCash: totalCollected - expenses.reduce((sum, e) => sum + (Number(e['Amount']) || 0), 0)
+        netCash: totalCollected - expenses.reduce((sum, e) => sum + (Number(e.amount) || 0), 0)
     };
 }
